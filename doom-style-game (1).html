@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser Doom - God Mode</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: monospace;
+      touch-action: none;
+    }
+    #game-container {
+      position: relative;
+      width: 640px;
+      height: 400px;
+      max-width: 100vw;
+      max-height: 80vh;
+    }
+    #canvas {
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+    }
+    #hud {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: #ff0000;
+      font-size: 18px;
+    }
+    #ammo {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      color: #ff0000;
+      font-size: 18px;
+    }
+    #health-bar {
+      position: absolute;
+      bottom: 30px;
+      left: 10px;
+      width: 150px;
+      height: 15px;
+      background-color: #333;
+    }
+    #health-fill {
+      height: 100%;
+      background-color: #ff0000;
+      width: 100%;
+    }
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 20px;
+      pointer-events: none;
+    }
+    #game-over {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #ff0000;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 30px;
+    }
+    #restart {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #ff0000;
+      color: #000;
+      border: none;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 18px;
+    }
+    #weapon {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 200px;
+      height: 150px;
+      background-image: url('/api/placeholder/200/150');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: bottom right;
+    }
+    #instructions {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      font-size: 14px;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 5px;
+    }
+    #touch-controls {
+      position: absolute;
+      bottom: 60px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+    }
+    .touch-button {
+      width: 60px;
+      height: 60px;
+      background-color: rgba(255, 0, 0, 0.3);
+      border: 2px solid #ff0000;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 20px;
+      user-select: none;
+    }
+    #movement-pad {
+      position: absolute;
+      left: 20px;
+      bottom: 60px;
+      width: 150px;
+      height: 150px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 5px;
+    }
+    #movement-pad div {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 20px;
+      background-color: rgba(255, 0, 0, 0.3);
+      border: 1px solid #ff0000;
+      user-select: none;
+    }
+    #action-buttons {
+      position: absolute;
+      right: 20px;
+      bottom: 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #look-pad {
+      position: absolute;
+      right: 100px;
+      bottom: 180px;
+      width: 120px;
+      height: 80px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 5px;
+    }
+    #look-pad div {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 20px;
+      background-color: rgba(0, 0, 255, 0.3);
+      border: 1px solid #0000ff;
+      user-select: none;
+    }
+    #god-mode {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #ff0000;
+      font-size: 18px;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 5px;
+    }
+    #settings-button {
+      position: absolute;
+      top: 40px;
+      right: 10px;
+      color: #fff;
+      font-size: 16px;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 5px;
+      cursor: pointer;
+    }
+    #settings-panel {
+      position: absolute;
+      top: 70px;
+      right: 10px;
+      width: 180px;
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 10px;
+      display: none;
+    }
+    .settings-option {
+      margin-bottom: 10px;
+      color: #fff;
+    }
+    .settings-option label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    @media (max-width: 768px) {
+      #instructions {
+        font-size: 10px;
+      }
+      .touch-button {
+        width: 50px;
+        height: 50px;
+      }
+      #movement-pad {
+        width: 120px;
+        height: 120px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="canvas"></canvas>
+    <div id="crosshair">+</div>
+    <div id="hud">HEALTH: <span id="health">∞</span></div>
+    <div id="health-bar"><div id="health-fill"></div></div>
+    <div id="ammo">AMMO: <span id="ammo-count">∞</span></div>
+    <div id="weapon"></div>
+    <div id="god-mode">GOD MODE: ON</div>
+    <div id="instructions">
+      WASD/Arrows: Move | Mouse/Swipe: Look | Click/Tap: Shoot | R/Reload Button: Reload
+    </div>
+    <div id="settings-button">⚙️ Settings</div>
+    <div id="settings-panel">
+      <div class="settings-option">
+        <label for="touch-controls-toggle">Touch Controls</label>
+        <select id="touch-controls-toggle">
+          <option value="auto">Auto (Default)</option>
+          <option value="on">Always On</option>
+          <option value="off">Always Off</option>
+        </select>
+      </div>
+      <div class="settings-option">
+        <label for="mouse-sensitivity">Mouse Sensitivity</label>
+        <input type="range" id="mouse-sensitivity" min="1" max="10" value="5">
+      </div>
+    </div>
+    <div id="game-over">
+      YOU WIN!
+      <button id="restart">PLAY AGAIN</button>
+    </div>
+    
+    <!-- Touch controls -->
+    <div id="movement-pad">
+      <div></div>
+      <div id="move-up">↑</div>
+      <div></div>
+      <div id="move-left">←</div>
+      <div></div>
+      <div id="move-right">→</div>
+      <div></div>
+      <div id="move-down">↓</div>
+      <div></div>
+    </div>
+    
+    <div id="look-pad">
+      <div></div>
+      <div></div>
+      <div></div>
+      <div id="look-left">↶</div>
+      <div></div>
+      <div id="look-right">↷</div>
+    </div>
+    
+    <div id="action-buttons">
+      <div id="shoot" class="touch-button">🔫</div>
+      <div id="reload" class="touch-button">↻</div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const healthDisplay = document.getElementById('health');
+      const healthFill = document.getElementById('health-fill');
+      const ammoDisplay = document.getElementById('ammo-count');
+      const gameOverScreen = document.getElementById('game-over');
+      const restartButton = document.getElementById('restart');
+      const movementPad = document.getElementById('movement-pad');
+      const lookPad = document.getElementById('look-pad');
+      const actionButtons = document.getElementById('action-buttons');
+      const settingsButton = document.getElementById('settings-button');
+      const settingsPanel = document.getElementById('settings-panel');
+      const touchControlsToggle = document.getElementById('touch-controls-toggle');
+      const mouseSensitivity = document.getElementById('mouse-sensitivity');
+      
+      canvas.width = 640;
+      canvas.height = 400;
+
+      // Settings
+      let settings = {
+        touchControls: 'auto',
+        mouseSensitivity: 5
+      };
+
+      // Game state
+      let player = {
+        x: 3.5,
+        y: 3.5,
+        angle: 0,
+        health: Infinity, // Make player unbeatable
+        ammo: Infinity,   // Infinite ammo
+        reloading: false,
+        invincible: true  // God mode
+      };
+
+      const map = [
+        [1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,0,0,0,1],
+        [1,0,0,0,0,0,1,0,0,1],
+        [1,0,1,0,0,0,1,0,0,1],
+        [1,0,1,0,0,0,0,0,0,1],
+        [1,0,1,0,0,0,0,1,0,1],
+        [1,0,0,0,1,0,0,1,0,1],
+        [1,0,0,0,1,0,0,0,0,1],
+        [1,0,0,0,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1,1,1,1]
+      ];
+
+      // Enemy class
+      class Enemy {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.health = 100;
+          this.dead = false;
+          this.speed = 0.03;
+          this.size = 0.6;
+          this.damage = 0; // No damage in god mode
+          this.attackCooldown = 0;
+        }
+        
+        update() {
+          if (this.dead) return;
+          
+          // Simple AI: Move towards player
+          const dx = player.x - this.x;
+          const dy = player.y - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist > this.size) {
+            this.x += (dx / dist) * this.speed;
+            this.y += (dy / dist) * this.speed;
+          }
+          
+          // Attack player if close enough (no actual damage in god mode)
+          if (dist < this.size + 0.5 && this.attackCooldown <= 0) {
+            // In god mode, no damage taken
+            this.attackCooldown = 60; // Attack every 60 frames (1 second)
+          }
+          
+          if (this.attackCooldown > 0) {
+            this.attackCooldown--;
+          }
+        }
+      }
+
+      // Create enemies
+      const enemies = [
+        new Enemy(2, 2),
+        new Enemy(8, 2),
+        new Enemy(2, 8),
+        new Enemy(8, 8),
+        new Enemy(5, 5)
+      ];
+
+      // Bullet class
+      class Bullet {
+        constructor(x, y, angle) {
+          this.x = x;
+          this.y = y;
+          this.angle = angle;
+          this.speed = 0.2;
+          this.lifetime = 100;
+          this.damage = 100; // One-shot kills in god mode
+        }
+        
+        update() {
+          this.x += Math.cos(this.angle) * this.speed;
+          this.y += Math.sin(this.angle) * this.speed;
+          this.lifetime--;
+          
+          // Check wall collision
+          const mapX = Math.floor(this.x);
+          const mapY = Math.floor(this.y);
+          if (map[mapY] && map[mapY][mapX] === 1) {
+            return true; // Remove bullet
+          }
+          
+          // Check enemy collision
+          for (let i = 0; i < enemies.length; i++) {
+            const enemy = enemies[i];
+            if (!enemy.dead) {
+              const dx = this.x - enemy.x;
+              const dy = this.y - enemy.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              
+              if (dist < enemy.size / 2) {
+                enemy.health -= this.damage;
+                if (enemy.health <= 0) {
+                  enemy.dead = true;
+                  
+                  // Check if all enemies are defeated
+                  if (enemies.every(e => e.dead)) {
+                    winGame();
+                  }
+                }
+                return true; // Remove bullet
+              }
+            }
+          }
+          
+          return this.lifetime <= 0;
+        }
+      }
+
+      const bullets = [];
+      
+      // Input handling
+      let isMouseLocked = false;
+      const keys = {};
+      let touchActive = false;
+      let lastTouchX = 0;
+      
+      // Settings panel
+      settingsButton.addEventListener('click', function() {
+        if (settingsPanel.style.display === 'block') {
+          settingsPanel.style.display = 'none';
+        } else {
+          settingsPanel.style.display = 'block';
+        }
+      });
+      
+      touchControlsToggle.addEventListener('change', function() {
+        settings.touchControls = touchControlsToggle.value;
+        updateTouchControlsVisibility();
+      });
+      
+      mouseSensitivity.addEventListener('input', function() {
+        settings.mouseSensitivity = parseInt(mouseSensitivity.value);
+      });
+      
+      function updateTouchControlsVisibility() {
+        let showTouchControls;
+        
+        if (settings.touchControls === 'auto') {
+          showTouchControls = isMobile();
+        } else {
+          showTouchControls = settings.touchControls === 'on';
+        }
+        
+        const display = showTouchControls ? 'grid' : 'none';
+        movementPad.style.display = display;
+        lookPad.style.display = display;
+        actionButtons.style.display = showTouchControls ? 'flex' : 'none';
+      }
+      
+      // Mouse/touch handling
+      canvas.addEventListener('mousedown', function(e) {
+        if (!isMouseLocked && !isMobile()) {
+          canvas.requestPointerLock();
+        } else {
+          shootBullet();
+        }
+      });
+      
+      function shootBullet() {
+        bullets.push(new Bullet(player.x, player.y, player.angle));
+      }
+      
+      document.addEventListener('pointerlockchange', function() {
+        isMouseLocked = document.pointerLockElement === canvas;
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+        if (isMouseLocked) {
+          const sensitivity = settings.mouseSensitivity / 1000;
+          player.angle += e.movementX * sensitivity;
+        }
+      });
+
+      // Handle touch events for look control on the canvas
+      canvas.addEventListener('touchstart', function(e) {
+        touchActive = true;
+        lastTouchX = e.touches[0].clientX;
+      });
+      
+      canvas.addEventListener('touchmove', function(e) {
+        if (touchActive) {
+          const touchX = e.touches[0].clientX;
+          const sensitivity = settings.mouseSensitivity / 500;
+          player.angle += (touchX - lastTouchX) * sensitivity;
+          lastTouchX = touchX;
+        }
+      });
+      
+      canvas.addEventListener('touchend', function() {
+        touchActive = false;
+      });
+      
+      // Keyboard control
+      document.addEventListener('keydown', function(e) {
+        // Support both WASD and arrow keys
+        switch(e.key.toLowerCase()) {
+          case 'w':
+          case 'arrowup':
+            keys['w'] = true;
+            break;
+          case 's':
+          case 'arrowdown':
+            keys['s'] = true;
+            break;
+          case 'a':
+          case 'arrowleft':
+            keys['a'] = true;
+            break;
+          case 'd':
+          case 'arrowright':
+            keys['d'] = true;
+            break;
+          case 'r':
+            reload();
+            break;
+          case ' ':
+            shootBullet();
+            break;
+          case 'escape':
+            if (isMouseLocked) {
+              document.exitPointerLock();
+            } else {
+              canvas.requestPointerLock();
+            }
+            break;
+        }
+      });
+      
+      function reload() {
+        if (!player.reloading) {
+          player.reloading = true;
+          setTimeout(() => {
+            player.ammo = Infinity;
+            player.reloading = false;
+            ammoDisplay.textContent = '∞';
+          }, 500); // Faster reload in god mode
+        }
+      }
+      
+      document.addEventListener('keyup', function(e) {
+        switch(e.key.toLowerCase()) {
+          case 'w':
+          case 'arrowup':
+            keys['w'] = false;
+            break;
+          case 's':
+          case 'arrowdown':
+            keys['s'] = false;
+            break;
+          case 'a':
+          case 'arrowleft':
+            keys['a'] = false;
+            break;
+          case 'd':
+          case 'arrowright':
+            keys['d'] = false;
+            break;
+        }
+      });
+      
+      function winGame() {
+        gameOverScreen.style.display = 'flex';
+        isMouseLocked = false;
+        if (document.pointerLockElement === canvas) {
+          document.exitPointerLock();
+        }
+      }
+      
+      restartButton.addEventListener('click', function() {
+        // Reset game
+        player.x = 3.5;
+        player.y = 3.5;
+        
+        // Reset enemies
+        enemies.forEach((enemy, index) => {
+          const positions = [[2, 2], [8, 2], [2, 8], [8, 8], [5, 5]];
+          enemy.x = positions[index][0];
+          enemy.y = positions[index][1];
+          enemy.health = 100;
+          enemy.dead = false;
+          enemy.attackCooldown = 0;
+        });
+        
+        bullets.length = 0;
+        
+        gameOverScreen.style.display = 'none';
+        if (!isMobile() && settings.touchControls !== 'on') {
+          canvas.requestPointerLock();
+        }
+      });
+      
+      function movePlayer() {
+        const moveSpeed = 0.05;
+        const oldX = player.x;
+        const oldY = player.y;
+        
+        if (keys['w']) {
+          player.x += Math.cos(player.angle) * moveSpeed;
+          player.y += Math.sin(player.angle) * moveSpeed;
+        }
+        if (keys['s']) {
+          player.x -= Math.cos(player.angle) * moveSpeed;
+          player.y -= Math.sin(player.angle) * moveSpeed;
+        }
+        if (keys['a']) {
+          player.x += Math.cos(player.angle - Math.PI/2) * moveSpeed;
+          player.y += Math.sin(player.angle - Math.PI/2) * moveSpeed;
+        }
+        if (keys['d']) {
+          player.x += Math.cos(player.angle + Math.PI/2) * moveSpeed;
+          player.y += Math.sin(player.angle + Math.PI/2) * moveSpeed;
+        }
+        
+        // Wall collision
+        const mapX = Math.floor(player.x);
+        const mapY = Math.floor(player.y);
+        
+        // Basic collision detection
+        if (map[mapY] && map[mapY][mapX] === 1) {
+          player.x = oldX;
+          player.y = oldY;
+        }
+      }
+      
+      function castRays() {
+        const FOV = Math.PI / 3;
+        const HALF_FOV = FOV / 2;
+        const rayCount = canvas.width;
+        const rayAngleStep = FOV / rayCount;
+        const maxDistance = 20;
+        const wallHeight = 2;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw ceiling (dark gray)
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
+        
+        // Draw floor (dark green)
+        ctx.fillStyle = '#131';
+        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+        
+        // Cast rays
+        for (let i = 0; i < rayCount; i++) {
+          const rayAngle = player.angle - HALF_FOV + i * rayAngleStep;
+          
+          const sin = Math.sin(rayAngle);
+          const cos = Math.cos(rayAngle);
+          
+          // Check distance to wall
+          let distance = 0;
+          let hitWall = false;
+          let wallType = 0;
+          
+          while (!hitWall && distance < maxDistance) {
+            distance += 0.05;
+            
+            const testX = Math.floor(player.x + cos * distance);
+            const testY = Math.floor(player.y + sin * distance);
+            
+            // Check if ray is out of bounds
+            if (testX < 0 || testX >= map[0].length || testY < 0 || testY >= map.length) {
+              hitWall = true;
+              distance = maxDistance;
+            } else if (map[testY][testX] === 1) {
+              // Hit wall
+              hitWall = true;
+              wallType = 1;
+            }
+          }
+          
+          // Calculate wall height
+          const wallDistance = distance * Math.cos(rayAngle - player.angle); // Fix fisheye effect
+          const projectedWallHeight = (canvas.height / wallDistance) * wallHeight;
+          
+          // Draw wall slice
+          const wallTop = Math.max(0, (canvas.height / 2) - (projectedWallHeight / 2));
+          const wallBottom = Math.min(canvas.height, (canvas.height / 2) + (projectedWallHeight / 2));
+          
+          // Wall color based on distance
+          const shade = 1 - Math.min(distance / maxDistance, 1);
+          let wallColor;
+          
+          if (wallType === 1) {
+            // Stone wall - red-brown color with shading
+            const r = Math.floor(150 * shade);
+            const g = Math.floor(70 * shade);
+            const b = Math.floor(60 * shade);
+            wallColor = `rgb(${r},${g},${b})`;
+          } else {
+            wallColor = '#000'; // Should not happen
+          }
+          
+          ctx.fillStyle = wallColor;
+          ctx.fillRect(i, wallTop, 1, wallBottom - wallTop);
+        }
+        
+        // Render enemies
+        for (const enemy of enemies) {
+          if (enemy.dead) continue;
+          
+          // Calculate direction and distance to enemy
+          const dx = enemy.x - player.x;
+          const dy = enemy.y - player.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          // Calculate angle to enemy relative to player's viewing angle
+          let angle = Math.atan2(dy, dx) - player.angle;
+          
+          // Normalize angle
+          while (angle < -Math.PI) angle += 2 * Math.PI;
+          while (angle >= Math.PI) angle -= 2 * Math.PI;
+          
+          // Check if enemy is in field of view
+          if (Math.abs(angle) < HALF_FOV) {
+            // Calculate screen position
+            const screenX = (angle + HALF_FOV) / FOV * canvas.width;
+            
+            // Calculate size based on distance
+            const height = (canvas.height / distance) * enemy.size * 2;
+            const width = height / 2;
+            
+            // Only draw if not behind a wall
+            let visible = true;
+            const rayDistance = 0.05;
+            let rayLength = 0;
+            
+            while (rayLength < distance && visible) {
+              const testX = Math.floor(player.x + Math.cos(player.angle + angle) * rayLength);
+              const testY = Math.floor(player.y + Math.sin(player.angle + angle) * rayLength);
+              
+              if (testX >= 0 && testX < map[0].length && testY >= 0 && testY < map.length && map[testY][testX] === 1) {
+                visible = false;
+              }
+              
+              rayLength += rayDistance;
+            }
+            
+            if (visible) {
+              // Calculate vertical position
+              const top = (canvas.height - height) / 2;
+              
+              // Draw enemy (simple rectangle)
+              const shade = 1 - Math.min(distance / maxDistance, 1);
+              const r = Math.floor(200 * shade);
+              const g = Math.floor(50 * shade);
+              const b = Math.floor(50 * shade);
+              
+              ctx.fillStyle = `rgb(${r},${g},${b})`;
+              ctx.fillRect(screenX - width / 2, top, width, height);
+            }
+          }
+        }
+      }
+      
+      // Mobile detection
+      function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      }
+      
+      // Touch controls
+      const moveUp = document.getElementById('move-up');
+      const moveDown = document.getElementById('move-down');
+      const moveLeft = document.getElementById('move-left');
+      const moveRight = document.getElementById('move-right');
+      const lookLeft = document.getElementById('look-left');
+      const lookRight = document.getElementById('look-right');
+      const shootBtn = document.getElementById('shoot');
+      const reloadBtn = document.getElementById('reload');
+      
+      function setupTouchControls() {
+        // Movement controls
+        setupTouchButton(moveUp, () => keys['w'] = true, () => keys['w'] = false);
+        setupTouchButton(moveDown, () => keys['s'] = true, () => keys['s'] = false);
+        setupTouchButton(moveLeft, () => keys['a'] = true, () => keys['a'] = false);
+        setupTouchButton(moveRight, () => keys['d'] = true, () => keys['d'] = false);
+        
+        // Look controls
+        let lookInterval;
+        setupTouchButton(lookLeft, 
+          () => {
+            lookInterval = setInterval(() => {
+              player.angle -= 0.05;
+            }, 16);
+          },
+          () => {
+            clearInterval(lookInterval);
+          }
+        );
+        
+        setupTouchButton(lookRight, 
+          () => {
+            lookInterval = setInterval(() => {
+              player.angle += 0.05;
+            }, 16);
+          },
+          () => {
+            clearInterval(lookInterval);
+          }
+        );
+        
+        // Action buttons
+        shootBtn.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          shootBullet();
+        });
+        
+        reloadBtn.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          reload();
+        });
+      }
+      
+      function setupTouchButton(element, startCallback, endCallback) {
+        element.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          startCallback();
+        });
+        
+        element.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          endCallback();
+        });
+        
+        element.addEventListener('touchcancel', function(e) {
+          e.preventDefault();
+          endCallback();
+        });
+        
+        // Also add mouse event support for when using desktop browser
+        element.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          startCallback();
+        });
+        
+        element.addEventListener('mouseup', function(e) {
+          e.preventDefault();
+          endCallback();
+        });
+        
+        element.addEventListener('mouseleave', function(e) {
+          e.preventDefault();
+          endCallback();
+        });
+      }
+      
+      // Initialize touch controls
+      setupTouchControls();
+      updateTouchControlsVisibility();
+      
+      function gameLoop() {
+        movePlayer();
+          
+        // Update bullets
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          if (bullets[i].update()) {
+            bullets.splice(i, 1);
+          }
+        }
+        
+        // Update enemies
+        for (const enemy of enemies) {
+          enemy.update();
+        }
+        
+        castRays();
+        
+        requestAnimationFrame(gameLoop);
+      }
+      
+      gameLoop();
+    });
+  </script>
+</body>
+</html>
